@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { interpret, State } from "xstate";
 import { practiceMachine } from "./machine";
 import { Question, Result, LeaveConfirmation } from "@/components";
@@ -14,13 +14,11 @@ interface PracticeContext {
 }
 
 const PracticePage: React.FC = () => {
-
-  const [state, setState] = React.useState(practiceMachine.initialState);
-  const [service, setService] = React.useState<any>(null);
-
+  const [state, setState] = useState(practiceMachine.initialState);
+  const [service, setService] = useState<any>(null);
 
   // Start the service when the component mounts
-  React.useEffect(() => {
+  useEffect(() => {
     const practiceService = interpret(practiceMachine)
       .onTransition(setState)
       .start();
@@ -33,65 +31,84 @@ const PracticePage: React.FC = () => {
   }, []);
 
   const handleStartPractice = () => service.send({ type: "PRACTICE_STARTED" });
-  
+
   const handleAnswerSubmit = (answer: string | null) => {
     service.send({ type: "ANSWER_SUBMITTED", answer });
   };
 
   const handleNextQuestion = () => {
     service.send({ type: "NEW_QUESTION_REQUESTED" });
-    console.log(state.context.currentQuestionIndex+ " ini ")
   };
 
-  const handleLeavePractice = () => {service.send({ type: "PRACTICE_LEFT" });}
-  
+  const handleLeavePractice = () => {
+    service.send({ type: "PRACTICE_LEFT" });
+  };
+
   const handleFinishPractice = () => {
     service.send({ type: "PRACTICE_FINISHED" });
-  }
+  };
 
   const handleNewPractice = () => {
     service.send({ type: "NEW_PRACTICE_REQUESTED" });
   };
 
   return (
-    <div>
+    <div className="mx-5">
       {state.matches("idle") && (
         <button onClick={handleStartPractice}>Start Practice</button>
       )}
-      {state.matches("practiceSession.questionDisplayed") && (
+      {(state.matches("practiceSession.questionDisplayed") ||
+        state.matches("practiceSession.submissionEvaluationDisplayed")) && (
         <>
+          <div className="grid grid-cols-12 items-center gap-4">
+            <div className="col-span-11 w-full bg-gray-200 rounded-full h-2.5 ">
+              <div
+                className="bg-purple-600 h-2.5 rounded-full transition-all duration-500"
+                style={{
+                  width: `${
+                    ((state.context.currentQuestionIndex + 1) /
+                      questions.length) *
+                    100
+                  }%`,
+                }}
+              ></div>
+            </div>
+            <p className="text-purple-700 text-sm">
+              <span className="font-semibold text-lg">
+                {state.context.currentQuestionIndex + 1}
+              </span>
+              /{questions ? questions.length : "?"} soal
+            </p>
+          </div>
           <Question
-            data={questions[state.context.currentQuestionIndex]}
+            data={questions}
+            index={state.context.currentQuestionIndex}
             onSubmit={handleAnswerSubmit}
+            onFinish={handleFinishPractice}
+            onNextQuestion={handleNextQuestion}
           />
-          {state.context.currentQuestionIndex < state.context.questions.length - 1 && <button onClick={handleNextQuestion}>Next</button>}
-          <button onClick={handleLeavePractice}>Leave</button>
-          <button onClick={handleFinishPractice}>Selesai</button>
         </>
       )}
       {state.matches("practiceSession.submissionEvaluationDisplayed") && (
         <>
           <Evaluation
             answerSubmitted={state.context.answer ?? ""}
-            correctAnswer={questions[state.context.currentQuestionIndex].correctAnswer}
+            correctAnswer={
+              questions[state.context.currentQuestionIndex].correctAnswer
+            }
           />
-          {state.context.currentQuestionIndex < state.context.questions.length - 1 && <button onClick={handleNextQuestion}>Next</button>}
           <button onClick={handleLeavePractice}>Leave</button>
-          <button onClick={handleFinishPractice}>Selesai</button>
         </>
       )}
       {state.matches("practiceResultDisplayed") && (
-        <Result
-          score={state.context.score}
-          onNewPractice={handleNewPractice}
-        />
+        <Result score={state.context.score} onNewPractice={handleNewPractice} />
       )}
       {state.matches("practiceSession.leaveConfirmationDisplayed") && (
         <>
-            <LeaveConfirmation
-              onConfirm={() => service.send({ type: "LEAVE_CONFIRMED" })}
-              onCancel={() => service.send({ type: "LEAVE_CANCELLED" })}
-            />
+          <LeaveConfirmation
+            onConfirm={() => service.send({ type: "LEAVE_CONFIRMED" })}
+            onCancel={() => service.send({ type: "LEAVE_CANCELLED" })}
+          />
         </>
       )}
     </div>

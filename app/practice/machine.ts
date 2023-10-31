@@ -89,6 +89,9 @@ export const practiceMachine = createMachine<PracticeContext>(
             on: {
               LEAVE_CONFIRMED: {
                 target: "#practiceMachine.idle",
+                actions: {
+                  type: "resetQuiz",
+                },
               },
               LEAVE_CANCELLED: {
                 target: "questionDisplayed",
@@ -125,8 +128,7 @@ export const practiceMachine = createMachine<PracticeContext>(
   },
   {
     actions: {
-      updateScore: (context, event) => {
-      },
+      updateScore: (context, event) => {},
 
       initializeQuiz: (context, event) => {
         context.questions = questions;
@@ -134,7 +136,10 @@ export const practiceMachine = createMachine<PracticeContext>(
 
       evaluateAnswer: (context, event) => {
         context.answer = event.answer;
-        if (event.answer === context.questions[context.currentQuestionIndex].correctAnswer) {
+        if (
+          event.answer ===
+          context.questions[context.currentQuestionIndex].correctAnswer
+        ) {
           context.score++;
         }
       },
@@ -149,8 +154,10 @@ export const practiceMachine = createMachine<PracticeContext>(
       },
     },
     services: {},
-    guards: { hasMoreQuestions: (context, event) => 
-      {return context.currentQuestionIndex < context.questions.length - 1} 
+    guards: {
+      hasMoreQuestions: (context, event) => {
+        return context.currentQuestionIndex < context.questions.length - 1;
+      },
     },
     delays: {},
   }
